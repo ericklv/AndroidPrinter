@@ -24,6 +24,8 @@ public class BitmapConvertor{
     private int mWidth, mHeight;
     private String mStatus;
     private String mFileName;
+    private String mDirFile;
+    private String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
 
 
     public BitmapConvertor(Context context) {
@@ -37,14 +39,15 @@ public class BitmapConvertor{
      * @param fileName : Save-As filename
      * @return :  Returns a String. Success when the file is saved on memory card or error.
      */
-    public String convertBitmap(Bitmap inputBitmap, String fileName){
+    public String convertBitmap(Bitmap inputBitmap, String fileName, String dirFile){
 
-        mWidth = inputBitmap.getWidth();
-        mHeight = inputBitmap.getHeight();
-        mFileName = fileName;
-        mDataWidth=((mWidth+31)/32)*4*8;
-        mDataArray = new byte[(mDataWidth * mHeight)];
-        mRawBitmapData = new byte[(mDataWidth * mHeight) / 8];
+        this.mWidth = inputBitmap.getWidth();
+        this.mHeight = inputBitmap.getHeight();
+        this.mFileName = fileName;
+        this.mDirFile = dirFile;
+        this.mDataWidth=((mWidth+31)/32)*4*8;
+        this.mDataArray = new byte[(mDataWidth * mHeight)];
+        this.mRawBitmapData = new byte[(mDataWidth * mHeight) / 8];
         ConvertInBackground convert = new ConvertInBackground();
         convert.execute(inputBitmap);
         return mStatus;
@@ -104,7 +107,8 @@ public class BitmapConvertor{
     private String saveImage(String fileName, int width, int height) {
         FileOutputStream fileOutputStream;
         BMPFile bmpFile = new BMPFile();
-        File file = new File(Environment.getExternalStorageDirectory(), fileName + ".bmp");
+        File myDir = new File(storage + "/"+mDirFile);
+        File file = new File(myDir, fileName + ".bmp");
         try {
             file.createNewFile();
             fileOutputStream = new FileOutputStream(file);
