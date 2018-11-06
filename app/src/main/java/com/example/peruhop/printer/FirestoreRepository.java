@@ -1,4 +1,4 @@
-package com.example.peruhop.myapplication2;
+package com.example.peruhop.printer;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 

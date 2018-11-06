@@ -1,11 +1,9 @@
-package com.example.peruhop.myapplication2;
+package com.example.peruhop.printer;
 
 import android.content.Context;
 import android.widget.Toast;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 

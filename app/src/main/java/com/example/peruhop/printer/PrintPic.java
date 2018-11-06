@@ -1,4 +1,4 @@
-package com.example.peruhop.myapplication2;
+package com.example.peruhop.printer;
 
 //
 // Source code recreated from a .class file by IntelliJ IDEA
@@ -7,12 +7,13 @@ package com.example.peruhop.myapplication2;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
+import android.graphics.Bitmap.CompressFormat;
+import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Bitmap.CompressFormat;
-import android.graphics.Bitmap.Config;
 import android.graphics.Paint.Style;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;

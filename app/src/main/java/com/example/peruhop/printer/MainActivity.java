@@ -1,4 +1,4 @@
-package com.example.peruhop.myapplication2;
+package com.example.peruhop.printer;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -81,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
 
         file = new File(path);
         encodedString = new String(encodeFileToBase64Binary(path), StandardCharsets.US_ASCII);
-        customToast(String.valueOf(encodedString.length())).show();
     }
 
     public Toast customToast(String text) {
@@ -110,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
             StrictMode.setThreadPolicy(policy);
         }
         lanConnection = new LanConnection(_address, Integer.parseInt(_port), this);
-//        firestoreTest();
+        firestoreTest();
     }
 
     private void createJSON() {
@@ -198,7 +197,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void recieveFile(File file) {
         if (lanConnection.getConnection() == null) {
             this.connectMessage.setText("Address doesnt exist");
@@ -215,15 +213,17 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 outputStream = lanConnection.getConnection().getOutputStream();
-                ArrayList<Bitmap> pages = pdfToBitmap(file);
+                ArrayList<Bitmap> pages = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    pages = pdfToBitmap(file);
+                }
                 int pageCounter = 0;
                 for (Bitmap page : pages) {
                     /*Este genera la imagen */
-                    BitmapConvertor bitmapConvertor = new BitmapConvertor(this);
-                    bitmapConvertor.convertBitmap(page, "gg" + pageCounter);
-                    printBoleta(storage + "/" + "gg"+pageCounter+".bmp");
+                    BitmapConvertor bitmapConvertor = new BitmapConvertor(this,outputStream);
+                    bitmapConvertor.convertBitmap(page, "voucher" + pageCounter,"PeruHopPrinter");
                     cutPrint(outputStream);
-                    outputStream.flush();
+//                    outputStream.flush();
                     pageCounter++;
                 }
             } catch (IOException e) {
@@ -274,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void firestoreTest() {
         firestore = new FirestoreRepository();
-        firestore.getFirestore().collection("test")
+        firestore.getFirestore().collection("printJobs")
                 .addSnapshotListener(new EventListener<QuerySnapshot>() {
                     @Override
                     public void onEvent(@Nullable QuerySnapshot snapshots,
@@ -287,7 +287,11 @@ public class MainActivity extends AppCompatActivity {
                         for (DocumentChange dc : snapshots.getDocumentChanges()) {
                             switch (dc.getType()) {
                                 case ADDED:
-                                    customToast("add" + dc.getDocument().getId()).show();
+                                    if(!Boolean.parseBoolean(dc.getDocument().get("printed").toString())){
+                                        customToast("new print" ).show();
+                                        File pdf64 = new File(base64toFile(String.valueOf(dc.getDocument().get("pdf")), storage + "/"+dc.getDocument().getId()+".pdf"));
+                                        recieveFile(pdf64);
+                                    }
                                     Log.d("TAG", "New Msg: " + dc.getDocument().toObject(Message.class));
                                     break;
                                 case MODIFIED:
@@ -327,6 +331,10 @@ public class MainActivity extends AppCompatActivity {
         sendData = pg.printDraw();
         try {
             outputStream.write(sendData);
+            File file = new File(path);
+            if(file.exists()){
+                file.delete();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -335,7 +343,6 @@ public class MainActivity extends AppCompatActivity {
     private File generateImage(Bitmap finalBitmap) {
 
         String root = storage;
-        customToast(root).show();
         File myDir = new File(root + "/PeruHopPrinter");
         if (!myDir.exists()) {
             myDir.mkdirs();
@@ -539,7 +546,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void printerTest(View view) {
         File pdf64 = new File(base64toFile(encodedString, storage + "/pdf.pdf"));
         recieveFile(pdf64);

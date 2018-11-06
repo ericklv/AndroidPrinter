@@ -1,8 +1,8 @@
-package com.example.peruhop.myapplication2;
-
-import java.io.FileOutputStream;
+package com.example.peruhop.printer;
 
 import android.util.Log;
+
+import java.io.FileOutputStream;
 
 public class BMPFile {
 
