@@ -4,10 +4,11 @@ import android.content.Context;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class LanConnection {
+public class LanConnection  implements Serializable {
 
     private String address;
     private int port;

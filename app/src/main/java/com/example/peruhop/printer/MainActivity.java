@@ -109,7 +109,12 @@ public class MainActivity extends AppCompatActivity {
             StrictMode.setThreadPolicy(policy);
         }
         lanConnection = new LanConnection(_address, Integer.parseInt(_port), this);
-        firestoreTest();
+        if (lanConnection.getConnection() == null) {
+            Utils.customToast(MainActivity.this, "Cant connect to IP");
+        } else {
+
+            firestoreTest();
+        }
     }
 
     private void createJSON() {
@@ -197,22 +202,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void recieveFile(File file) {
-        if (lanConnection.getConnection() == null) {
-            this.connectMessage.setText("Address doesnt exist");
+    private void recieveFile(File file, LanConnection connection) {
+        if (connection.getConnection() == null) {
+            this.connectMessage.setText("Lost Connection :'(");
         } else {
-            OutputStream opstream = null;
-
             try {
-                opstream = lanConnection.getConnection().getOutputStream();
-            } catch (IOException e) {
-                e.printStackTrace();
-                this.connectMessage.setText("Cant connect to printer ");
-            }
-            outputStream = opstream;
-
-            try {
-                outputStream = lanConnection.getConnection().getOutputStream();
+                outputStream = connection.getConnection().getOutputStream();
                 ArrayList<Bitmap> pages = null;
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                     pages = pdfToBitmap(file);
@@ -220,8 +215,8 @@ public class MainActivity extends AppCompatActivity {
                 int pageCounter = 0;
                 for (Bitmap page : pages) {
                     /*Este genera la imagen */
-                    BitmapConvertor bitmapConvertor = new BitmapConvertor(this,outputStream);
-                    bitmapConvertor.convertBitmap(page, "voucher" + pageCounter,"PeruHopPrinter");
+                    BitmapConvertor bitmapConvertor = new BitmapConvertor(this, outputStream);
+                    bitmapConvertor.convertBitmap(page, "voucher" + pageCounter, "PeruHopPrinter");
                     cutPrint(outputStream);
 //                    outputStream.flush();
                     pageCounter++;
@@ -280,28 +275,30 @@ public class MainActivity extends AppCompatActivity {
                     public void onEvent(@Nullable QuerySnapshot snapshots,
                                         @Nullable FirebaseFirestoreException e) {
                         if (e != null) {
-                            Log.w("TAG", "listen:error", e);
+                            Log.w("TAG", "listen: connection error", e);
                             return;
                         }
 
                         for (DocumentChange dc : snapshots.getDocumentChanges()) {
-                            switch (dc.getType()) {
-                                case ADDED:
-                                    if(!Boolean.parseBoolean(dc.getDocument().get("printed").toString())){
-                                        customToast("new print" ).show();
-                                        File pdf64 = new File(base64toFile(String.valueOf(dc.getDocument().get("pdf")), storage + "/"+dc.getDocument().getId()+".pdf"));
-                                        recieveFile(pdf64);
-                                    }
-                                    Log.d("TAG", "New Msg: " + dc.getDocument().toObject(Message.class));
-                                    break;
-                                case MODIFIED:
-                                    customToast("update" + dc.getDocument().getId()).show();
-                                    Log.d("TAG", "Modified Msg: " + dc.getDocument().toObject(Message.class));
-                                    break;
-                                case REMOVED:
-                                    customToast("remove").show();
-                                    Log.d("TAG", "Removed Msg: " + dc.getDocument().toObject(Message.class));
-                                    break;
+                            if (!Boolean.parseBoolean(dc.getDocument().get("printed").toString())) {
+                                String tempFilePath = storage + "/" + dc.getDocument().getId() + ".pdf";
+                                File pdf64 = new File(base64toFile(String.valueOf(dc.getDocument().get("pdf")), tempFilePath));
+                                switch (dc.getType()) {
+                                    case ADDED:
+                                        Utils.customToast(MainActivity.this,"new print").show();
+//                                        recieveFile(pdf64,lanConnection);
+                                        Log.d("TAG", "New Msg: " + dc.getDocument().toObject(Message.class));
+                                        break;
+                                    case MODIFIED:
+                                        Utils.customToast(MainActivity.this,"update" + dc.getDocument().getId()).show();
+//                                        recieveFile(pdf64,lanConnection);
+                                        Log.d("TAG", "Modified Msg: " + dc.getDocument().toObject(Message.class));
+                                        break;
+                                    case REMOVED:
+                                        Utils.customToast(MainActivity.this,"remove").show();
+                                        Log.d("TAG", "Removed Msg: " + dc.getDocument().toObject(Message.class));
+                                        break;
+                                }
                             }
                         }
 
@@ -332,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             outputStream.write(sendData);
             File file = new File(path);
-            if(file.exists()){
+            if (file.exists()) {
                 file.delete();
             }
         } catch (IOException e) {
@@ -548,6 +545,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void printerTest(View view) {
         File pdf64 = new File(base64toFile(encodedString, storage + "/pdf.pdf"));
-        recieveFile(pdf64);
+        recieveFile(pdf64, lanConnection);
     }
 }

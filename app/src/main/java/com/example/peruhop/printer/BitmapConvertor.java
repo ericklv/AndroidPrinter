@@ -2,6 +2,7 @@ package com.example.peruhop.printer;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -120,11 +121,10 @@ public class BitmapConvertor {
             return "Memory Access Denied";
         }
         bmpFile.saveBitmap(fileOutputStream, mRawBitmapData, width, height);
-//        bmpFile.saveBitmap(fileOutputStream, mRawBitmapData, width, height);
         return "Success";
     }
 
-    private void printBoleta(String path) {
+    private void printBitmap(String path) {
         byte[] sendData = null;
         PrintPic pg = new PrintPic();
         pg.initCanvas(800);
@@ -157,14 +157,20 @@ public class BitmapConvertor {
         @Override
         protected void onPostExecute(Void result) {
             // TODO Auto-generated method stub
+            final String ACTION_PROGRESO = "net.sgoliver.intent.action.PROGRESO";
+            Intent intentPrinterService = new Intent();
+            intentPrinterService.setAction(ACTION_PROGRESO);
+            intentPrinterService.putExtra("finish", true);
+
             String path = storage + "/" + mDirFile + "/" + mFileName + ".bmp";
-            printBoleta(path);
+            printBitmap(path);
             try {
                 outputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
             mPd.dismiss();
+            mContext.sendBroadcast(intentPrinterService);
             Toast.makeText(mContext, "Monochrome bitmap created successfully. Please check in sdcard", Toast.LENGTH_LONG).show();
         }
 

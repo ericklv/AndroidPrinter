@@ -1,7 +1,12 @@
 package com.example.peruhop.printer;
 
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.util.Log;
+import android.view.Gravity;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -165,5 +170,20 @@ public class Utils {
 
     private static byte charToByte(char c) {
         return (byte) "0123456789ABCDEF".indexOf(c);
+    }
+
+    public static Toast customToast(Context context, String text) {
+        Toast toast = new Toast(context);
+        toast.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL, 0, 0);
+
+        TextView textView = new TextView(context);
+        textView.setBackgroundColor(Color.argb(200, 99, 110, 114));
+        textView.setTextColor(Color.WHITE);
+        textView.setTextSize(20);
+        textView.setPadding(15, 10, 15, 10);
+        textView.setText(text);
+        toast.setView(textView);
+
+        return toast;
     }
 }
