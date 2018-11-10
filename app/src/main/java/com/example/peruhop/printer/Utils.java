@@ -172,8 +172,9 @@ public class Utils {
         return (byte) "0123456789ABCDEF".indexOf(c);
     }
 
-    public static Toast customToast(Context context, String text) {
+    public static Toast customToast(Context context, String text, int duration) {
         Toast toast = new Toast(context);
+        toast.setDuration(duration);
         toast.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL, 0, 0);
 
         TextView textView = new TextView(context);

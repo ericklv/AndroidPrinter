@@ -1,1 +1,42 @@
-//put your credentials here
+{
+  "project_info": {
+    "project_number": "164143214655",
+    "firebase_url": "https://hostel-pos-dev.firebaseio.com",
+    "project_id": "hostel-pos-dev",
+    "storage_bucket": "hostel-pos-dev.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:164143214655:android:9d447ba26629d87b",
+        "android_client_info": {
+          "package_name": "com.example.peruhop.myapplication2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "164143214655-m59p8af8h31prrcirr4u094vs59i4qde.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAj4x7sHG4MdR6C5630K_YCEWBoskszyTA"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

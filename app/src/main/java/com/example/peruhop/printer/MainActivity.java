@@ -1,5 +1,12 @@
 package com.example.peruhop.printer;
 
+import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -16,6 +23,9 @@ import android.os.ParcelFileDescriptor;
 import android.os.StrictMode;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
@@ -63,39 +73,67 @@ public class MainActivity extends AppCompatActivity {
     private FirestoreRepository firestore;
     private File file;
     private String encodedString;
-    String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
+    public final static String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
     String pdf = "ticket.pdf";
     String path = storage + "/" + pdf;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        getPermissions();
         setContentView(R.layout.activity_main);
 
         address = (EditText) findViewById(R.id.currentIP);
         port = (EditText) findViewById(R.id.port);
         connectMessage = (TextView) findViewById(R.id.connectMessage);
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
+            PermissionsDialogAlert();
+        }
+
         createJSON();
 
         file = new File(path);
         encodedString = new String(encodeFileToBase64Binary(path), StandardCharsets.US_ASCII);
+
+
     }
 
-    public Toast customToast(String text) {
-        Toast toast = new Toast(this);
-        toast.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL, 0, 0);
+    protected void getPermissions() {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
 
-        TextView textView = new TextView(MainActivity.this);
-        textView.setBackgroundColor(Color.argb(200, 99, 110, 114));
-        textView.setTextColor(Color.WHITE);
-        textView.setTextSize(20);
-        textView.setPadding(15, 10, 15, 10);
-        textView.setText(text);
-        toast.setView(textView);
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
 
-        return toast;
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        1);
+            }
+        }
+    }
+
+    protected void PermissionsDialogAlert(){
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setTitle("Application Permissions");
+        alertDialog.setMessage("Is necessary the write permission.The application will stop, " +
+                "go to settings and assign the permissions.");
+        alertDialog.setCancelable(false);
+        alertDialog.setPositiveButton("Ok, thnks", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface alerDialog, int id) {
+                finish();
+                System.exit(0);
+            }
+        });
+        alertDialog.setNegativeButton("Stop app", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface alerDialog, int id) {
+                finish();
+                System.exit(0);
+            }
+        });
+        alertDialog.show();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -108,13 +146,28 @@ public class MainActivity extends AppCompatActivity {
             StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
             StrictMode.setThreadPolicy(policy);
         }
-        lanConnection = new LanConnection(_address, Integer.parseInt(_port), this);
-        if (lanConnection.getConnection() == null) {
-            Utils.customToast(MainActivity.this, "Cant connect to IP");
-        } else {
+//        lanConnection = new LanConnection(_address, Integer.parseInt(_port), this);
+//        if (lanConnection.getConnection() == null) {
+//            Utils.customToast(MainActivity.this, "Cant connect to IP");
+//        } else {
+//            Intent msgIntent = new Intent(MainActivity.this, IntentPrinterService.class);
+//            msgIntent.putExtra("iteraciones", 10);
+//            msgIntent.putExtra("ip",_address);
+//            msgIntent.putExtra("port",Integer.parseInt(_port));
+//            startService(msgIntent);
+//
+//            IntentFilter filter = new IntentFilter();
+//            filter.addAction(IntentPrinterService.ACTION_PROGRESO);
+//            filter.addAction(IntentPrinterService.ACTION_FIN);
+//            ProgressReceiver rcv = new ProgressReceiver();
+//            registerReceiver(rcv, filter);
+        Intent msgIntent = new Intent(MainActivity.this, PrinterService.class);
+        msgIntent.putExtra("ip", _address);
+        msgIntent.putExtra("port", Integer.parseInt(_port));
+        startService(msgIntent);
 
-            firestoreTest();
-        }
+//            firestoreTest();
+//        }
     }
 
     private void createJSON() {
@@ -183,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
                         total += Double.parseDouble(price);
                     }
                     printCustom(leftRightAlign("Total:", String.format("%.2f", total)), 1, 1);
-                    customToast(String.format("%.2f", total)).show();
+                    Utils.customToast(this, String.format("%.2f", total), 0).show();
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -192,41 +245,41 @@ public class MainActivity extends AppCompatActivity {
 
                 outputStream.flush();
             } catch (IOException e) {
-                customToast("ioexception").show();
+                Utils.customToast(this, "ioexception", 0).show();
                 e.printStackTrace();
             } catch (JSONException e) {
-                customToast("JSON").show();
+                Utils.customToast(this, "JSON", 0).show();
                 e.printStackTrace();
             }
         }
     }
 
 
-    private void recieveFile(File file, LanConnection connection) {
-        if (connection.getConnection() == null) {
-            this.connectMessage.setText("Lost Connection :'(");
-        } else {
-            try {
-                outputStream = connection.getConnection().getOutputStream();
-                ArrayList<Bitmap> pages = null;
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                    pages = pdfToBitmap(file);
-                }
-                int pageCounter = 0;
-                for (Bitmap page : pages) {
-                    /*Este genera la imagen */
-                    BitmapConvertor bitmapConvertor = new BitmapConvertor(this, outputStream);
-                    bitmapConvertor.convertBitmap(page, "voucher" + pageCounter, "PeruHopPrinter");
-                    cutPrint(outputStream);
-//                    outputStream.flush();
-                    pageCounter++;
-                }
-            } catch (IOException e) {
-                customToast("ioexception").show();
-                e.printStackTrace();
-            }
-        }
-    }
+//    private void recieveFile(File file, LanConnection connection) {
+//        if (connection.getConnection() == null) {
+//            this.connectMessage.setText("Lost Connection :'(");
+//        } else {
+//            try {
+//                outputStream = connection.getConnection().getOutputStream();
+//                ArrayList<Bitmap> pages = null;
+//                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+//                    pages = pdfToBitmap(file);
+//                }
+//                int pageCounter = 0;
+//                for (Bitmap page : pages) {
+//                    /*Este genera la imagen */
+//                    BitmapConvertor bitmapConvertor = new BitmapConvertor(this, outputStream);
+//                    bitmapConvertor.convertBitmap(page, "voucher" + pageCounter, "PeruHopPrinter");
+//                    cutPrint(outputStream);
+////                    outputStream.flush();
+//                    pageCounter++;
+//                }
+//            } catch (IOException e) {
+//                Utils.customToast(this,"ioexception").show();
+//                e.printStackTrace();
+//            }
+//        }
+//    }
 
     private static byte[] encodeFileToBase64Binary(String fileName) {
 
@@ -267,44 +320,44 @@ public class MainActivity extends AppCompatActivity {
         return bytes;
     }
 
-    private void firestoreTest() {
-        firestore = new FirestoreRepository();
-        firestore.getFirestore().collection("printJobs")
-                .addSnapshotListener(new EventListener<QuerySnapshot>() {
-                    @Override
-                    public void onEvent(@Nullable QuerySnapshot snapshots,
-                                        @Nullable FirebaseFirestoreException e) {
-                        if (e != null) {
-                            Log.w("TAG", "listen: connection error", e);
-                            return;
-                        }
-
-                        for (DocumentChange dc : snapshots.getDocumentChanges()) {
-                            if (!Boolean.parseBoolean(dc.getDocument().get("printed").toString())) {
-                                String tempFilePath = storage + "/" + dc.getDocument().getId() + ".pdf";
-                                File pdf64 = new File(base64toFile(String.valueOf(dc.getDocument().get("pdf")), tempFilePath));
-                                switch (dc.getType()) {
-                                    case ADDED:
-                                        Utils.customToast(MainActivity.this,"new print").show();
+//    private void firestoreTest() {
+//        firestore = new FirestoreRepository();
+//        firestore.getFirestore().collection("printJobs")
+//                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+//                    @Override
+//                    public void onEvent(@Nullable QuerySnapshot snapshots,
+//                                        @Nullable FirebaseFirestoreException e) {
+//                        if (e != null) {
+//                            Log.w("TAG", "listen: connection error", e);
+//                            return;
+//                        }
+//
+//                        for (DocumentChange dc : snapshots.getDocumentChanges()) {
+//                            if (!Boolean.parseBoolean(dc.getDocument().get("printed").toString())) {
+//                                String tempFilePath = storage + "/" + dc.getDocument().getId() + ".pdf";
+//                                File pdf64 = new File(base64toFile(String.valueOf(dc.getDocument().get("pdf")), tempFilePath));
+//                                switch (dc.getType()) {
+//                                    case ADDED:
+//                                        Utils.customToast(MainActivity.this,"new print").show();
 //                                        recieveFile(pdf64,lanConnection);
-                                        Log.d("TAG", "New Msg: " + dc.getDocument().toObject(Message.class));
-                                        break;
-                                    case MODIFIED:
-                                        Utils.customToast(MainActivity.this,"update" + dc.getDocument().getId()).show();
+//                                        Log.d("TAG", "New Msg: " + dc.getDocument().toObject(Message.class));
+//                                        break;
+//                                    case MODIFIED:
+//                                        Utils.customToast(MainActivity.this,"update" + dc.getDocument().getId()).show();
 //                                        recieveFile(pdf64,lanConnection);
-                                        Log.d("TAG", "Modified Msg: " + dc.getDocument().toObject(Message.class));
-                                        break;
-                                    case REMOVED:
-                                        Utils.customToast(MainActivity.this,"remove").show();
-                                        Log.d("TAG", "Removed Msg: " + dc.getDocument().toObject(Message.class));
-                                        break;
-                                }
-                            }
-                        }
-
-                    }
-                });
-    }
+//                                        Log.d("TAG", "Modified Msg: " + dc.getDocument().toObject(Message.class));
+//                                        break;
+//                                    case REMOVED:
+//                                        Utils.customToast(MainActivity.this,"remove").show();
+//                                        Log.d("TAG", "Removed Msg: " + dc.getDocument().toObject(Message.class));
+//                                        break;
+//                                }
+//                            }
+//                        }
+//
+//                    }
+//                });
+//    }
 
 
     private void cutPrint(OutputStream outputStream) throws IOException {
@@ -319,49 +372,49 @@ public class MainActivity extends AppCompatActivity {
         outputStream.flush();
     }
 
-    private void printBoleta(String path) {
-        byte[] sendData = null;
-        PrintPic pg = new PrintPic();
-        pg.initCanvas(800);
-        pg.initPaint();
-        pg.drawImage(-20, 0, path);
-        sendData = pg.printDraw();
-        try {
-            outputStream.write(sendData);
-            File file = new File(path);
-            if (file.exists()) {
-                file.delete();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    private void printBoleta(String path) {
+//        byte[] sendData = null;
+//        PrintPic pg = new PrintPic();
+//        pg.initCanvas(800);
+//        pg.initPaint();
+//        pg.drawImage(-20, 0, path);
+//        sendData = pg.printDraw();
+//        try {
+//            outputStream.write(sendData);
+//            File file = new File(path);
+//            if (file.exists()) {
+//                file.delete();
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
-    private File generateImage(Bitmap finalBitmap) {
-
-        String root = storage;
-        File myDir = new File(root + "/PeruHopPrinter");
-        if (!myDir.exists()) {
-            myDir.mkdirs();
-        }
-        Random generator = new Random();
-        int n = 10000;
-        n = generator.nextInt(n);
-        String fname = "Image-" + n + ".jpg";
-        File file = new File(myDir, fname);
-        if (file.exists())
-            file.delete();
-        try {
-            FileOutputStream out = new FileOutputStream(file);
-            finalBitmap.compress(Bitmap.CompressFormat.PNG, 90, out);
-            out.flush();
-            out.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return file;
-    }
+//    private File generateImage(Bitmap finalBitmap) {
+//
+//        String root = storage;
+//        File myDir = new File(root + "/PeruHopPrinter");
+//        if (!myDir.exists()) {
+//            myDir.mkdirs();
+//        }
+//        Random generator = new Random();
+//        int n = 10000;
+//        n = generator.nextInt(n);
+//        String fname = "Image-" + n + ".jpg";
+//        File file = new File(myDir, fname);
+//        if (file.exists())
+//            file.delete();
+//        try {
+//            FileOutputStream out = new FileOutputStream(file);
+//            finalBitmap.compress(Bitmap.CompressFormat.PNG, 90, out);
+//            out.flush();
+//            out.close();
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return file;
+//    }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private ArrayList<Bitmap> pdfToBitmap(File pdfFile) {
@@ -398,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
         return decodedByte;
     }
 
-    private String base64toFile(String encodedString, String pathFile) {
+    public static String base64toFile(String encodedString, String pathFile) {
         try {
             File file = new File(pathFile);
             file.createNewFile();
@@ -545,6 +598,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void printerTest(View view) {
         File pdf64 = new File(base64toFile(encodedString, storage + "/pdf.pdf"));
-        recieveFile(pdf64, lanConnection);
+//        recieveFile(pdf64, lanConnection);
     }
+//
+//    public class ProgressReceiver extends BroadcastReceiver {
+//
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+////            if(intent.getAction().equals(IntentPrinterService.ACTION_PROGRESO)) {
+////                int prog = intent.getIntExtra("progreso", 0);
+////                connectMessage.setText(String.valueOf(prog));
+////            }
+////            else if(intent.getAction().equals(IntentPrinterService.ACTION_FIN)) {
+////                Toast.makeText(MainActivity.this, "Tarea finalizada!", Toast.LENGTH_SHORT).show();
+////            }
+//        }
+//    }
 }

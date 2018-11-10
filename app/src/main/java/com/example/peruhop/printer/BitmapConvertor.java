@@ -44,7 +44,7 @@ public class BitmapConvertor {
      * @param fileName    : Save-As filename
      * @return :  Returns a String. Success when the file is saved on memory card or error.
      */
-    public String convertBitmap(Bitmap inputBitmap, String fileName, String dirFile) {
+    public String convertBitmap(final Bitmap inputBitmap, String fileName, String dirFile) {
 
         this.mWidth = inputBitmap.getWidth();
         this.mHeight = inputBitmap.getHeight();
@@ -53,8 +53,31 @@ public class BitmapConvertor {
         this.mDataWidth = ((mWidth + 31) / 32) * 4 * 8;
         this.mDataArray = new byte[(mDataWidth * mHeight)];
         this.mRawBitmapData = new byte[(mDataWidth * mHeight) / 8];
-        ConvertInBackground convert = new ConvertInBackground();
-        convert.execute(inputBitmap);
+        Log.d("convertBitmap", "working");
+//        ConvertInBackground convert = new ConvertInBackground();
+//        final Thread t = new Thread() {
+//            @Override
+//            public void run() {
+                try {
+                    convertArgbToGrayscale(inputBitmap, mWidth, mHeight);
+                    createRawMonochromeData();
+                    Log.d("convertBitmap", "making");
+                    mStatus = saveImage(mFileName, mWidth, mHeight);
+                } finally {
+                    String path = storage + "/" + mDirFile + "/" + mFileName + ".bmp";
+                    Log.d("convertBitmapFinally", "path:"+path);
+                    printBitmap(path);
+                    try {
+                        outputStream.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    Log.d("thread", "Success Printed");
+                }
+//            }
+//        };
+//        t.start();
+//        convert.execute(inputBitmap);
         return mStatus;
 
     }
@@ -116,11 +139,13 @@ public class BitmapConvertor {
         try {
             file.createNewFile();
             fileOutputStream = new FileOutputStream(file);
+            Log.d("saveImage","success create file");
         } catch (IOException e) {
             // TODO Auto-generated catch block
             return "Memory Access Denied";
         }
         bmpFile.saveBitmap(fileOutputStream, mRawBitmapData, width, height);
+        Log.d("saveImage","success save file");
         return "Success";
     }
 
@@ -169,7 +194,7 @@ public class BitmapConvertor {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            mPd.dismiss();
+//            mPd.dismiss();
             mContext.sendBroadcast(intentPrinterService);
             Toast.makeText(mContext, "Monochrome bitmap created successfully. Please check in sdcard", Toast.LENGTH_LONG).show();
         }
@@ -178,7 +203,7 @@ public class BitmapConvertor {
         @Override
         protected void onPreExecute() {
             // TODO Auto-generated method stub
-            mPd = ProgressDialog.show(mContext, "Converting Image", "Please Wait", true, false, null);
+//            mPd = ProgressDialog.show(mContext, "Converting Image", "Please Wait", true, false, null);
         }
 
 
